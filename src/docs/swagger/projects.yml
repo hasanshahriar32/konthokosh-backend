@@ -1,0 +1,622 @@
+openapi: 3.1.0
+info:
+  title: Thinkscribe Projects API
+  version: 1.0.0
+  description: |
+    Project management endpoints for handling project data including PDF lists and search functionality.
+    All endpoints require JWT authentication and projects are scoped to the authenticated user.
+tags:
+  - name: Projects
+    description: Project management operations with user authentication and ownership
+
+paths:
+  /projects:
+    get:
+      summary: Get all projects for the authenticated user
+      tags: [Projects]
+      description: |
+        Retrieves all projects belonging to the authenticated user with pagination and search functionality.
+        Projects are automatically filtered by the user ID extracted from the JWT token.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          required: true
+          description: Page number for pagination
+        - in: query
+          name: size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          required: true
+          description: Number of items per page
+        - in: query
+          name: keyword
+          schema:
+            type: string
+          required: false
+          description: Search keyword to filter projects by title, description, or searchId
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [title, description, searchId, createdAt]
+          required: false
+          description: Field to sort by
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          required: false
+          description: Sort order
+      responses:
+        '200':
+          description: List of projects with pagination metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Successfully Retrieved!"
+                  data:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Project'
+                      pagination:
+                        $ref: '#/components/schemas/PaginationMeta'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Create a new project with automatic research paper discovery
+      tags: [Projects]
+      description: |
+        Creates a new project for the authenticated user by taking a title and description, then automatically searches for relevant research papers using the ThinkSource API. 
+        
+        **Process:**
+        1. Accepts only title and description from the request body
+        2. Automatically extracts user ID from JWT token
+        3. Combines title and description as a search query
+        4. Calls ThinkSource API to fetch relevant research papers
+        5. Creates project with fetched papers and associates it with the authenticated user
+        
+        The external API returns up to 100 research papers from openalex, arxiv, and pubmed sources.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+            examples:
+              machine_learning:
+                summary: Machine Learning Project
+                value:
+                  title: "Machine Learning Neural Networks"
+                  description: "Research on deep learning architectures and neural network optimization techniques"
+              ai_research:
+                summary: AI Research Project
+                value:
+                  title: "Artificial Intelligence Applications"
+                  description: "Comprehensive study on AI applications in healthcare and autonomous systems"
+      responses:
+        '201':
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Successfully Created!"
+                  data:
+                    $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /projects/{id}:
+    get:
+      summary: Get a project by ID for the authenticated user
+      tags: [Projects]
+      description: |
+        Retrieves a specific project by ID. The project must belong to the authenticated user.
+        Returns 404 if the project doesn't exist or doesn't belong to the user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            minimum: 1
+          required: true
+          description: Project ID
+          example: 1
+      responses:
+        '200':
+          description: Project found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Successfully Retrieved!"
+                  data:
+                    $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      summary: Update a project for the authenticated user
+      tags: [Projects]
+      description: |
+        Updates an existing project that belongs to the authenticated user. 
+        Only the project owner can update their projects. Returns 404 if the project doesn't exist or doesn't belong to the user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            minimum: 1
+          required: true
+          description: Project ID
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+            examples:
+              partial_update:
+                summary: Update title only
+                value:
+                  title: "Updated AI Research Project"
+              full_update:
+                summary: Update all fields
+                value:
+                  title: "Comprehensive AI Study"
+                  description: "An updated comprehensive study on AI applications and machine learning"
+                  searchId: "ai-research-updated-2024"
+                  pdfList:
+                    - name: "Updated Executive Summary"
+                      url: "https://example.com/docs/updated-exec-summary.pdf"
+      responses:
+        '200':
+          description: Project updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Successfully Updated!"
+                  data:
+                    $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Delete a project for the authenticated user
+      tags: [Projects]
+      description: |
+        Deletes an existing project that belongs to the authenticated user. 
+        Only the project owner can delete their projects. Returns 404 if the project doesn't exist or doesn't belong to the user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            minimum: 1
+          required: true
+          description: Project ID
+          example: 1
+      responses:
+        '200':
+          description: Project deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Successfully Deleted!"
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "1"
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  schemas:
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the project
+          example: 1
+        userId:
+          type: integer
+          description: ID of the user who owns this project
+          example: 42
+        title:
+          type: string
+          maxLength: 255
+          description: Project title
+          example: "AI Research Project"
+        description:
+          type: string
+          nullable: true
+          description: Detailed project description
+          example: "A comprehensive study on AI applications in various industries"
+        searchId:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Unique search identifier returned by ThinkSource API
+          example: "47"
+        pdfList:
+          type: array
+          description: List of research papers automatically fetched from ThinkSource API
+          items:
+            $ref: '#/components/schemas/ResearchPaper'
+          example:
+            - id: 445
+              searchId: 47
+              title: "Stochastic Quantum Spiking Neural Networks with Quantum Memory and Local Learning"
+              authors: ["Jiechen Chen", "Bipin Rajendran", "Osvaldo Simeone"]
+              abstract: "Neuromorphic and quantum computing have recently emerged as promising paradigms..."
+              year: 2025
+              source: "arxiv"
+              url: "https://arxiv.org/abs/2506.21324v1"
+              pdfUrl: "https://arxiv.org/pdf/2506.21324v1.pdf"
+              matchScore: 100
+      required:
+        - id
+        - userId
+        - title
+        - pdfList
+
+    ResearchPaper:
+      type: object
+      description: Research paper fetched from ThinkSource API
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the research paper
+          example: 445
+        searchId:
+          type: integer
+          description: Search ID from ThinkSource API
+          example: 47
+        title:
+          type: string
+          description: Title of the research paper
+          example: "Stochastic Quantum Spiking Neural Networks with Quantum Memory and Local Learning"
+        authors:
+          type: array
+          items:
+            type: string
+          description: List of paper authors
+          example: ["Jiechen Chen", "Bipin Rajendran", "Osvaldo Simeone"]
+        abstract:
+          type: string
+          description: Abstract of the research paper
+          example: "Neuromorphic and quantum computing have recently emerged as promising paradigms for advancing artificial intelligence..."
+        year:
+          type: integer
+          description: Publication year
+          example: 2025
+        source:
+          type: string
+          description: Source of the paper (arxiv, openalex, pubmed)
+          example: "arxiv"
+        sourceId:
+          type: string
+          description: Source-specific identifier
+          example: "2506.21324v1"
+        url:
+          type: string
+          format: uri
+          description: URL to the paper
+          example: "https://arxiv.org/abs/2506.21324v1"
+        pdfUrl:
+          type: string
+          format: uri
+          description: Direct URL to the PDF
+          example: "https://arxiv.org/pdf/2506.21324v1.pdf"
+        doi:
+          type: string
+          nullable: true
+          description: Digital Object Identifier
+          example: null
+        citations:
+          type: integer
+          description: Number of citations
+          example: 0
+        fileSize:
+          type: integer
+          nullable: true
+          description: File size in bytes
+          example: null
+        pageCount:
+          type: integer
+          nullable: true
+          description: Number of pages
+          example: null
+        language:
+          type: string
+          description: Language of the paper
+          example: "en"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags or categories
+          example: ["cs.NE", "cs.LG"]
+        matchScore:
+          type: integer
+          description: Relevance score from search
+          example: 100
+        metadata:
+          type: object
+          description: Additional metadata
+          example: 
+            arxivId: "2506.21324v1"
+            updated: "2025-06-26T14:39:14Z"
+            categories: ["cs.NE", "cs.LG"]
+        selected:
+          type: boolean
+          description: Whether the paper is selected
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2025-06-28T19:36:11.279Z"
+      required:
+        - id
+        - searchId
+        - title
+        - authors
+        - abstract
+        - year
+        - source
+        - url
+        - pdfUrl
+        - matchScore
+
+    PdfDocument:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Display name of the PDF document
+          example: "Research Methodology"
+        url:
+          type: string
+          format: uri
+          description: URL to access the PDF document
+          example: "https://example.com/docs/methodology.pdf"
+      required:
+        - name
+        - url
+      additionalProperties: true
+
+    CreateProjectRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Project title used as part of the search query
+          example: "Machine Learning Neural Networks"
+        description:
+          type: string
+          minLength: 1
+          description: Detailed project description used as part of the search query
+          example: "Research on deep learning architectures and neural network optimization techniques for computer vision and natural language processing"
+      required:
+        - title
+        - description
+
+    UpdateProjectRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Project title
+          example: "Updated AI Research Project"
+        description:
+          type: string
+          description: Detailed project description
+          example: "An updated comprehensive study on AI applications"
+        searchId:
+          type: string
+          maxLength: 255
+          description: Unique search identifier for the project
+          example: "47"
+        pdfList:
+          type: array
+          description: List of research papers
+          items:
+            $ref: '#/components/schemas/ResearchPaper'
+      minProperties: 1
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Current page number
+          example: 1
+        size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        totalCount:
+          type: integer
+          description: Total number of items
+          example: 50
+        totalPages:
+          type: integer
+          description: Total number of pages
+          example: 5
+      required:
+        - page
+        - size
+        - totalCount
+        - totalPages
+
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: "Validation error"
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                    path:
+                      type: array
+                      items:
+                        type: string
+                    type:
+                      type: string
+                example:
+                  - message: "String must contain at least 1 character(s)"
+                    path: ["title"]
+                    type: "too_small"
+
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: "Unauthorized Access!"
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: "Project not found"
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: "Failed to process request"
+              details:
+                type: string
+                example: "Database connection error"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from Clerk authentication

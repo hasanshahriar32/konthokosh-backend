@@ -1,0 +1,747 @@
+openapi: 3.1.0
+info:
+  title: Thinkscribe RBAC API
+  version: 1.0.0
+  description: RBAC (roles, modules, permissions, etc.) endpoints
+tags:
+  - name: Roles
+    description: Role management
+  - name: Modules
+    description: Module management
+  - name: SubModules
+    description: Sub-module management
+  - name: Permissions
+    description: Permission management
+  - name: Actions
+    description: Action management
+  - name: Channels
+    description: Channel management
+
+paths:
+  /roles:
+    get:
+      summary: Get all roles
+      tags: [Roles]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: size
+          schema:
+            type: integer
+          required: true
+          description: Number of items per page
+        - in: query
+          name: page
+          schema:
+            type: integer
+          required: false
+          description: Page number (optional)
+      responses:
+        '200':
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Role'
+        '401':
+          $ref: '#/components/responses/4XX'
+    post:
+      summary: Create a new role
+      tags: [Roles]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Role'
+      responses:
+        '200':
+          description: Role created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '401':
+          $ref: '#/components/responses/4XX'
+  /roles/{id}:
+    get:
+      summary: Get a role by ID
+      tags: [Roles]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Role found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '401':
+          $ref: '#/components/responses/4XX'
+    put:
+      summary: Update a role
+      tags: [Roles]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Role'
+      responses:
+        '200':
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '401':
+          $ref: '#/components/responses/4XX'
+    delete:
+      summary: Delete a role
+      tags: [Roles]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Role deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '401':
+          $ref: '#/components/responses/4XX'
+  /modules:
+    get:
+      summary: Get all modules
+      tags: [Modules]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of modules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Module'
+    post:
+      summary: Create a new module
+      tags: [Modules]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Module' # Assuming ModuleInsert schema or similar for request
+      responses:
+        '201':
+          description: Module created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+  /modules/{id}:
+    get:
+      summary: Get a module by ID
+      tags: [Modules]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Module found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+    put:
+      summary: Update a module
+      tags: [Modules]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Module' # Assuming ModuleUpdate schema or similar for request
+      responses:
+        '200':
+          description: Module updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+    delete:
+      summary: Delete a module
+      tags: [Modules]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Module deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module' # Or a success message schema
+
+  /sub-modules:
+    get:
+      summary: Get all sub-modules
+      tags: [SubModules]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of sub-modules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubModule'
+    post:
+      summary: Create a new sub-module
+      tags: [SubModules]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubModule' # Assuming SubModuleInsert
+      responses:
+        '201':
+          description: Sub-module created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubModule'
+  /sub-modules/{id}:
+    get:
+      summary: Get a sub-module by ID
+      tags: [SubModules]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Sub-module found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubModule'
+    put:
+      summary: Update a sub-module
+      tags: [SubModules]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubModule' # Assuming SubModuleUpdate
+      responses:
+        '200':
+          description: Sub-module updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubModule'
+    delete:
+      summary: Delete a sub-module
+      tags: [SubModules]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Sub-module deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubModule' # Or a success message
+
+  /permissions:
+    get:
+      summary: Get all permissions
+      tags: [Permissions]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Permission'
+    post:
+      summary: Create a new permission
+      tags: [Permissions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Permission' # Assuming PermissionInsert
+      responses:
+        '201':
+          description: Permission created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permission'
+  /permissions/{id}:
+    get:
+      summary: Get a permission by ID
+      tags: [Permissions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Permission found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permission'
+    put:
+      summary: Update a permission
+      tags: [Permissions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Permission' # Assuming PermissionUpdate
+      responses:
+        '200':
+          description: Permission updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permission'
+    delete:
+      summary: Delete a permission
+      tags: [Permissions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Permission deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permission' # Or a success message
+
+  /actions:
+    get:
+      summary: Get all actions
+      tags: [Actions]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of actions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Action'
+    post:
+      summary: Create a new action
+      tags: [Actions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Action' # Assuming ActionInsert
+      responses:
+        '201':
+          description: Action created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Action'
+  /actions/{id}:
+    get:
+      summary: Get an action by ID
+      tags: [Actions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Action found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Action'
+    put:
+      summary: Update an action
+      tags: [Actions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Action' # Assuming ActionUpdate
+      responses:
+        '200':
+          description: Action updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Action'
+    delete:
+      summary: Delete an action
+      tags: [Actions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Action deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Action' # Or a success message
+
+  /channels:
+    get:
+      summary: Get all channels
+      tags: [Channels]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of channels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Channel'
+    post:
+      summary: Create a new channel
+      tags: [Channels]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Channel' # Assuming ChannelInsert
+      responses:
+        '201':
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+  /channels/{id}:
+    get:
+      summary: Get a channel by ID
+      tags: [Channels]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Channel found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+    put:
+      summary: Update a channel
+      tags: [Channels]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Channel' # Assuming ChannelUpdate
+      responses:
+        '200':
+          description: Channel updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+    delete:
+      summary: Delete a channel
+      tags: [Channels]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Channel deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel' # Or a success message
+# End of RBAC endpoints
+
+components:
+  schemas:
+    Role:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    Module:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    SubModule:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        moduleId:
+          type: integer
+        description:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    Permission:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        actionId:
+          type: integer
+        moduleId:
+          type: integer
+        subModuleId:
+          type: integer
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    Action:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    Channel:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        This JWT is issued and validated by Clerk. To authenticate, use the access token provided by Clerk in the Authorization header:
+        Authorization: Bearer <clerk_jwt_token>
+        The token must be a valid Clerk session or access token. See https://clerk.com/docs/authentication/tokens for details.
+  responses:
+    '4XX':
+      description: Error response (client error)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              statusCode:
+                type: integer
+                example: 401
+              message:
+                type: string
+                example: Unauthorized Access!
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    path:
+                      type: string
+                      example: /api/v1/users
+                    message:
+                      type: string
+                      example: Unauthorized Access!
+              meta:
+                type: object
+                nullable: true
+                example: null
+
+security:
+  - bearerAuth: []

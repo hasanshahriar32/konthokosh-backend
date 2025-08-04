@@ -1,0 +1,650 @@
+openapi: 3.1.0
+info:
+  title: Thinkscribe Embedding Tasks API
+  version: 1.0.0
+  description: |
+    Embedding task management endpoints for handling PDF embedding tasks with external services.
+    Most endpoints require JWT authentication and embedding tasks are scoped to the authenticated user.
+tags:
+  - name: Embedding Tasks
+    description: PDF embedding task management operations with user authentication and project association
+
+paths:
+  /embedding-tasks:
+    get:
+      summary: Get all embedding tasks for the authenticated user
+      tags: [Embedding Tasks]
+      description: |
+        Retrieves all embedding tasks belonging to the authenticated user with pagination and search functionality.
+        Embedding tasks are automatically filtered by the user ID extracted from the JWT token.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          required: true
+          description: Page number for pagination
+        - in: query
+          name: size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          required: true
+          description: Number of items per page
+        - in: query
+          name: keyword
+          schema:
+            type: string
+          required: false
+          description: Search keyword to filter embedding tasks by taskId or status
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [createdAt, updatedAt, status, taskId]
+            default: createdAt
+          required: false
+          description: Field to sort by
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          required: false
+          description: Sort order
+      responses:
+        '200':
+          description: List of embedding tasks with pagination metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Successfully Retrieved!"
+                  data:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/EmbeddingTask'
+                      pagination:
+                        $ref: '#/components/schemas/PaginationMeta'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      summary: Create a new embedding task
+      tags: [Embedding Tasks]
+      description: |
+        Creates a new embedding task for the authenticated user by taking only a project ID, then automatically fetching PDF URLs and calling the worker server.
+        
+        **Process:**
+        1. Validates that the project belongs to the authenticated user
+        2. Extracts the searchId from the project record
+        3. Calls external service API to fetch PDF URLs using the searchId
+        4. Structures the batch job request for the worker server
+        5. Calls worker server to start embedding batch job
+        6. Creates embedding task record with worker server response data
+        
+        The worker server will process the PDFs and the status can be monitored via the API.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmbeddingTaskRequest'
+            examples:
+              simple_task:
+                summary: Simple Embedding Task Creation
+                value:
+                  projectId: 1
+      responses:
+        '201':
+          description: Embedding task created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Embedding task created successfully!"
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 123
+                      projectId:
+                        type: integer
+                        example: 456
+                      status:
+                        type: string
+                        example: "pending"
+                      message:
+                        type: string
+                        example: "Embedding task created for project 456. Processing 15 PDF files."
+                      batchId:
+                        type: string
+                        example: "batch_67890abcdef"
+                      taskIds:
+                        type: array
+                        items:
+                          type: string
+                        example: ["task_1", "task_2", "task_3"]
+                      totalTasks:
+                        type: integer
+                        example: 15
+                      concurrency:
+                        type: integer
+                        example: 3
+                      estimatedProcessingTime:
+                        type: string
+                        example: "5-10 minutes"
+                      pdfUrlsCount:
+                        type: integer
+                        example: 15
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2024-01-15T10:30:00Z"
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /embedding-tasks/{id}:
+    get:
+      summary: Get embedding task by ID for the authenticated user
+      tags: [Embedding Tasks]
+      description: |
+        Retrieves a specific embedding task by ID. The embedding task must belong to the authenticated user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Embedding task ID
+      responses:
+        '200':
+          description: Embedding task retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Successfully Retrieved!"
+                  data:
+                    $ref: '#/components/schemas/EmbeddingTask'
+        '400':
+          $ref: '#/components/responses/ValidationError'  
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Embedding task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    
+    delete:
+      summary: Delete embedding task
+      tags: [Embedding Tasks]
+      description: |
+        Deletes an embedding task. The embedding task must belong to the authenticated user.
+        Note: This only deletes the local record, it does not cancel external processing.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Embedding task ID
+      responses:
+        '200':
+          description: Embedding task deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Successfully Deleted!"
+                  data:
+                    type: 'null'
+                    example: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Embedding task not found or access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /embedding-tasks/project/{projectId}:
+    get:
+      summary: Get embedding tasks by project ID
+      tags: [Embedding Tasks]
+      description: |
+        Retrieves all embedding tasks for a specific project. Both the project and embedding tasks must belong to the authenticated user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Project ID
+      responses:
+        '200':
+          description: Embedding tasks retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Successfully Retrieved!"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EmbeddingTask'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /embedding-tasks/webhook/status-update:
+    post:
+      summary: Webhook endpoint for individual PDF processing status updates
+      tags: [Embedding Tasks]
+      description: |
+        Webhook endpoint called by the external embedding service to update the processing status of individual PDF files.
+        The external service calls this endpoint for each PDF with either 'success' or 'failed' status.
+        This endpoint requires a webhook secret token in the X-Webhook-Token header for authentication.
+        
+        **Authentication:** Uses webhook token instead of JWT authentication.
+        **Note:** The system automatically determines overall task completion when all PDFs are processed.
+      parameters:
+        - in: header
+          name: X-Webhook-Token
+          required: true
+          schema:
+            type: string
+          description: Webhook secret token for authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookStatusUpdate'
+            examples:
+              pdf_success:
+                summary: PDF Processing Success
+                value:
+                  pdfUrl: "https://example.com/paper1.pdf"
+                  status: "success"
+                  message: "PDF processed successfully"
+              pdf_failed:
+                summary: PDF Processing Failed
+                value:
+                  pdfUrl: "https://example.com/paper2.pdf"
+                  status: "failed"
+                  errorMessage: "Failed to extract text from PDF"
+                  message: "PDF processing failed"
+      responses:
+        '200':
+          description: PDF status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "PDF status updated successfully"
+                  data:
+                    type: object
+                    properties:
+                      taskId:
+                        type: string
+                        example: "batch-123"
+                      pdfUrl:
+                        type: string
+                        example: "https://example.com/paper1.pdf"
+                      status:
+                        type: string
+                        example: "success"
+                      taskStatus:
+                        type: string
+                        example: "processing"
+                      updatedAt:
+                        type: string
+                        format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Invalid webhook token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Embedding task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /embedding-tasks/status/{taskId}:
+    get:
+      summary: Get task status (public endpoint for external services)
+      tags: [Embedding Tasks]
+      description: |
+        Public endpoint to check the status of an embedding task using the external task ID.
+        This endpoint doesn't require JWT authentication but you may want to add API key authentication in production.
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+          description: External task ID
+      responses:
+        '200':
+          description: Task status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Task status retrieved"
+                  data:
+                    type: object
+                    properties:
+                      taskId:
+                        type: string
+                        example: "ext-task-123"
+                      status:
+                        type: string
+                        enum: [pending, processing, completed, failed]
+                        example: "processing"
+                      totalPapers:
+                        type: integer
+                        example: 15
+                      completedPapers:
+                        type: integer
+                        example: 10
+                      failedPapers:
+                        type: integer
+                        example: 1
+                      updatedAt:
+                        type: string
+                        format: date-time
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from the authentication endpoint
+
+  schemas:
+    EmbeddingTask:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the embedding task
+          example: 1
+        userId:
+          type: integer
+          description: ID of the user who owns this embedding task (auto-populated from JWT)
+          example: 42
+        projectId:
+          type: integer
+          description: ID of the associated project
+          example: 1
+        taskId:
+          type: string
+          description: External service task identifier
+          example: "ext-task-123"
+        searchId:
+          type: integer
+          description: Search ID from the original research paper search
+          example: 50
+        totalPapers:
+          type: integer
+          description: Total number of papers in this embedding task
+          example: 15
+        uploadedCount:
+          type: integer
+          description: Number of papers uploaded to external service
+          example: 15
+        papers:
+          type: array
+          description: List of papers with their embedding status
+          items:
+            $ref: '#/components/schemas/EmbeddingPaper'
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+          description: Overall status of the embedding task
+          example: "processing"
+        createdAt:
+          type: string
+          format: date-time
+          description: Task creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Task last update timestamp
+
+    EmbeddingPaper:
+      type: object
+      properties:
+        paperId:
+          type: integer
+          description: Unique identifier for the paper
+          example: 660
+        title:
+          type: string
+          description: Title of the research paper
+          example: "Towards Reliable Detection of Empty Space"
+        blobUrl:
+          type: string
+          format: uri
+          description: URL to the PDF blob storage
+          example: "https://example.com/papers/paper1.pdf"
+        status:
+          type: string
+          enum: [pending, processing, success, failed]
+          description: Individual paper embedding status
+          example: "success"
+        errorMessage:
+          type: string
+          description: Error message if paper processing failed
+          example: "PDF processing failed"
+
+    CreateEmbeddingTaskRequest:
+      type: object
+      required:
+        - projectId
+      properties:
+        projectId:
+          type: integer
+          minimum: 1
+          description: ID of the project to create embedding task for. The system will automatically fetch papers from the external service using the project's searchId.
+          example: 1
+
+    WebhookStatusUpdate:
+      type: object
+      required:
+        - pdfUrl
+        - status
+      properties:
+        pdfUrl:
+          type: string
+          format: uri
+          description: URL of the PDF that was processed
+          example: "https://example.com/papers/paper1.pdf"
+        status:
+          type: string
+          enum: [success, failed]
+          description: Processing status of the PDF
+          example: "success"
+        errorMessage:
+          type: string
+          maxLength: 1000
+          description: Error message if status is 'failed' (optional)
+          example: "Failed to extract text from PDF"
+        message:
+          type: string
+          maxLength: 500
+          description: Optional status update message
+          example: "PDF processed successfully"
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Current page number
+          example: 1
+        size:
+          type: integer
+          description: Number of items per page
+          example: 10
+        totalCount:
+          type: integer
+          description: Total number of items
+          example: 25
+        totalPages:
+          type: integer
+          description: Total number of pages
+          example: 3
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Error message"
+        error:
+          type: string
+          example: "Detailed error information"
+
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: "Validation failed"
+            error: '"projectId" is required'
+
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: "User authentication required"
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: "Internal server error"

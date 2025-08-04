@@ -1,0 +1,25 @@
+export const ROLES = {
+  ADMIN: 'ADMIN',
+  USER: 'USER',
+  DEV: 'DEVELOPER',
+};
+export const ACTIONS = {
+  CREATE: 'CREATE',
+  VIEW: 'VIEW',
+  UPDATE: 'UPDATE',
+  DELETE: 'DELETE',
+};
+export const CHANNELS = {
+  WEB: 'WEB',
+  MOBILE: 'MOBILE',
+};
+export const MODULES = {
+  USER_MANAGEMENT: 'USER_MANAGEMENT',
+  PRODUCT: 'PRODUCT',
+};
+export const SUB_MODULES = {
+  USER: 'USER',
+  USER_ROLE_ASSIGN: 'USER_ROLE_ASSIGN',
+  PRODUCT_CATEGORY: 'PRODUCT_CATEGORY',
+  PRODUCT: 'PRODUCT',
+};

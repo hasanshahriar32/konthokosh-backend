@@ -1,0 +1,2 @@
+echo "Running ESLint..."
+npm run lint || { echo "❌ Lint failed. Aborting commit."; exit 1; }
