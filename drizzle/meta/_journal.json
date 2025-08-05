@@ -8,6 +8,13 @@
       "when": 1754373841242,
       "tag": "0000_rainy_toad_men",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1754429052414,
+      "tag": "0001_next_corsair",
+      "breakpoints": true
     }
   ]
 }

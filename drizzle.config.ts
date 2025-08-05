@@ -6,6 +6,7 @@ export default {
   schema: [
     './dist/src/db/schema/rbac.js',
     './dist/src/db/schema/users.js',
+    './dist/src/db/schema/posts.js',
     './dist/src/db/schema/products.js',
     './dist/src/db/schema/channels.js',
     './dist/src/db/schema/embedDataSchema.js',

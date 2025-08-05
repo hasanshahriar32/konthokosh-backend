@@ -1,0 +1,713 @@
+openapi: 3.0.0
+info:
+  title: Posts API
+  version: 1.0.0
+  description: |
+    API endpoints for managing posts in the application.
+    
+    ## Authentication
+    All endpoints require a valid JWT Bearer token from Clerk authentication.
+    
+    ### How to authenticate:
+    1. Obtain a JWT token from Clerk authentication
+    2. Include the token in the Authorization header: `Authorization: Bearer <your-jwt-token>`
+    
+    ### User Context:
+    - User ID is automatically extracted from the JWT token
+    - Users can only update/delete their own posts
+    - Admin actions (approve/unapprove) may require additional permissions
+    
+    ### Post Filtering:
+    - By default, only approved posts are shown to public users
+    - Use `isApproved=false` to view unapproved posts (requires permissions)
+    - Use `isApproved=true` to explicitly view approved posts
+    - Use `userId` parameter to view posts by specific user
+    - Use `keyword` parameter for content search
+    
+    ### Example Authentication Header:
+    ```
+    Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+    ```
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the post
+          example: 1
+        post:
+          type: string
+          description: Content of the post
+          example: "This is my first post about technology"
+        userId:
+          type: integer
+          description: ID of the user who created the post
+          example: 123
+        isApproved:
+          type: boolean
+          description: Whether the post is approved by admin
+          example: true
+        imagesId:
+          type: array
+          items:
+            type: string
+          description: Array of image IDs associated with the post
+          example: ["img_001.jpg", "img_002.png"]
+        isActive:
+          type: boolean
+          description: Whether the post is active
+          example: true
+        isDeleted:
+          type: boolean
+          description: Whether the post is soft deleted
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the post was created
+          example: "2025-08-06T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the post was last updated
+          example: "2025-08-06T12:15:00Z"
+        userFirstName:
+          type: string
+          nullable: true
+          description: First name of the user who created the post
+          example: "John"
+        userLastName:
+          type: string
+          nullable: true
+          description: Last name of the user who created the post
+          example: "Doe"
+        userImageUrl:
+          type: string
+          nullable: true
+          description: Profile image URL of the user who created the post
+          example: "https://example.com/profile.jpg"
+
+    CreatePostRequest:
+      type: object
+      required:
+        - post
+      properties:
+        post:
+          type: string
+          minLength: 1
+          maxLength: 5000
+          description: Content of the post
+          example: "This is my new post about technology trends"
+        imagesId:
+          type: array
+          items:
+            type: string
+          description: Array of image IDs to associate with the post
+          default: []
+          example: ["img_001.jpg", "img_002.png"]
+        isApproved:
+          type: boolean
+          description: Whether the post should be approved (admin only)
+          default: false
+          example: false
+
+    UpdatePostRequest:
+      type: object
+      properties:
+        post:
+          type: string
+          minLength: 1
+          maxLength: 5000
+          description: Updated content of the post
+          example: "This is my updated post content"
+        imagesId:
+          type: array
+          items:
+            type: string
+          description: Updated array of image IDs
+          example: ["img_003.jpg"]
+        isApproved:
+          type: boolean
+          description: Whether the post is approved (admin only)
+          example: true
+        isActive:
+          type: boolean
+          description: Whether the post is active
+          example: true
+
+    PostListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Post'
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+              description: Current page number
+              example: 1
+            size:
+              type: integer
+              description: Number of items per page
+              example: 10
+            totalCount:
+              type: integer
+              description: Total number of posts
+              example: 100
+            totalPages:
+              type: integer
+              description: Total number of pages
+              example: 10
+
+    ApiResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 200
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation successful"
+        data:
+          oneOf:
+            - $ref: '#/components/schemas/Post'
+            - $ref: '#/components/schemas/PostListResponse'
+
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Validation error"
+        data:
+          type: object
+          nullable: true
+          example: null
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ========================================
+  # AUTHENTICATION REQUIREMENTS
+  # ========================================
+  # All endpoints below require:
+  # - Authorization: Bearer <clerk-jwt-token>
+  # - Valid Clerk JWT token in the header
+  # - User ID is extracted from token automatically
+  # ========================================
+
+  /posts:
+    get:
+      tags:
+        - Posts
+      summary: Get all posts
+      description: |
+        Retrieve a paginated list of posts with optional filtering. Requires valid JWT token from Clerk authentication.
+        
+        **Default Behavior:**
+        - Shows only approved posts for general listing
+        - When `myPosts=true`, shows all user's posts (approved + unapproved)
+        - When `isApproved` is explicitly set, respects that filter
+        
+        **Filter Priority:**
+        1. If `isApproved` query param is provided → use that filter
+        2. If `myPosts=true` → show all user's posts regardless of approval
+        3. Otherwise → show only approved posts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: size
+          in: query
+          description: Number of posts per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+        - name: keyword
+          in: query
+          description: Search keyword to filter posts by content
+          required: false
+          schema:
+            type: string
+            example: "technology"
+        - name: isApproved
+          in: query
+          description: Filter posts by approval status
+          required: false
+          schema:
+            type: boolean
+            example: true
+        - name: userId
+          in: query
+          description: Filter posts by user ID
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            example: 123
+        - name: myPosts
+          in: query
+          description: Filter to show only posts created by the authenticated user
+          required: false
+          schema:
+            type: boolean
+            example: true
+      responses:
+        '200':
+          description: Posts retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  value:
+                    statusCode: 200
+                    success: true
+                    message: "Posts retrieved successfully"
+                    data:
+                      data:
+                        - id: 1
+                          post: "This is a sample post"
+                          userId: 123
+                          isApproved: true
+                          imagesId: ["img1.jpg"]
+                          isActive: true
+                          isDeleted: false
+                          createdAt: "2025-08-06T10:30:00Z"
+                          updatedAt: "2025-08-06T10:30:00Z"
+                          userFirstName: "John"
+                          userLastName: "Doe"
+                          userImageUrl: "https://example.com/profile.jpg"
+                      pagination:
+                        page: 1
+                        size: 10
+                        totalCount: 25
+                        totalPages: 3
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Posts
+      summary: Create a new post
+      description: Create a new post with content and optional images. User ID is automatically extracted from JWT token.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+            examples:
+              basic_post:
+                summary: Basic post creation
+                value:
+                  post: "This is my new post about technology"
+              post_with_images:
+                summary: Post with images
+                value:
+                  post: "Check out these amazing photos!"
+                  imagesId: ["img_001.jpg", "img_002.png"]
+      responses:
+        '201':
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  value:
+                    statusCode: 201
+                    success: true
+                    message: "Post created successfully"
+                    data:
+                      id: 1
+                      post: "This is my new post about technology"
+                      userId: 123
+                      isApproved: false
+                      imagesId: []
+                      isActive: true
+                      isDeleted: false
+                      createdAt: "2025-08-06T10:30:00Z"
+                      updatedAt: "2025-08-06T10:30:00Z"
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation_error:
+                  value:
+                    statusCode: 400
+                    success: false
+                    message: "Validation failed"
+                    data: null
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /posts/{id}:
+    get:
+      tags:
+        - Posts
+      summary: Get a single post
+      description: Retrieve a specific post by its ID. Requires valid JWT token from Clerk authentication.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Post ID
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+      responses:
+        '200':
+          description: Post retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  value:
+                    statusCode: 200
+                    success: true
+                    message: "Post retrieved successfully"
+                    data:
+                      id: 1
+                      post: "This is a sample post"
+                      userId: 123
+                      isApproved: true
+                      imagesId: ["img1.jpg"]
+                      isActive: true
+                      isDeleted: false
+                      createdAt: "2025-08-06T10:30:00Z"
+                      updatedAt: "2025-08-06T10:30:00Z"
+                      userFirstName: "John"
+                      userLastName: "Doe"
+                      userImageUrl: "https://example.com/profile.jpg"
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    statusCode: 404
+                    success: false
+                    message: "Post not found"
+                    data: null
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Posts
+      summary: Update a post
+      description: Update an existing post's content, images, or status. Users can only update their own posts.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Post ID
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePostRequest'
+            examples:
+              update_content:
+                summary: Update post content
+                value:
+                  post: "This is my updated post content"
+              update_images:
+                summary: Update post images
+                value:
+                  imagesId: ["new_img1.jpg", "new_img2.png"]
+              approve_post:
+                summary: Approve post (admin)
+                value:
+                  isApproved: true
+      responses:
+        '200':
+          description: Post updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  value:
+                    statusCode: 200
+                    success: true
+                    message: "Post updated successfully"
+                    data:
+                      id: 1
+                      post: "Updated post content"
+                      userId: 123
+                      isApproved: true
+                      imagesId: ["new_img1.jpg"]
+                      isActive: true
+                      isDeleted: false
+                      createdAt: "2025-08-06T10:30:00Z"
+                      updatedAt: "2025-08-06T12:15:00Z"
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - You can only update your own posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  value:
+                    statusCode: 403
+                    success: false
+                    message: "You can only update your own posts"
+                    data: null
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Posts
+      summary: Delete a post
+      description: Permanently delete a post from the system. Users can only delete their own posts.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Post ID
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+      responses:
+        '200':
+          description: Post deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  value:
+                    statusCode: 200
+                    success: true
+                    message: "Post deleted successfully"
+                    data: null
+        '403':
+          description: Forbidden - You can only delete your own posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  value:
+                    statusCode: 403
+                    success: false
+                    message: "You can only delete your own posts"
+                    data: null
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /posts/{id}/approve:
+    patch:
+      tags:
+        - Posts
+      summary: Approve a post
+      description: Approve a post for public visibility (admin action). Requires valid JWT token from Clerk authentication.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Post ID
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+      responses:
+        '200':
+          description: Post approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  value:
+                    statusCode: 200
+                    success: true
+                    message: "Post approved successfully"
+                    data:
+                      id: 1
+                      post: "This post is now approved"
+                      userId: 123
+                      isApproved: true
+                      imagesId: ["img1.jpg"]
+                      isActive: true
+                      isDeleted: false
+                      createdAt: "2025-08-06T10:30:00Z"
+                      updatedAt: "2025-08-06T12:15:00Z"
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /posts/{id}/unapprove:
+    patch:
+      tags:
+        - Posts
+      summary: Unapprove a post
+      description: Remove approval from a post (admin action). Requires valid JWT token from Clerk authentication.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Post ID
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+      responses:
+        '200':
+          description: Post unapproved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  value:
+                    statusCode: 200
+                    success: true
+                    message: "Post unapproved successfully"
+                    data:
+                      id: 1
+                      post: "This post is now unapproved"
+                      userId: 123
+                      isApproved: false
+                      imagesId: ["img1.jpg"]
+                      isActive: true
+                      isDeleted: false
+                      createdAt: "2025-08-06T10:30:00Z"
+                      updatedAt: "2025-08-06T12:15:00Z"
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

@@ -65,6 +65,7 @@ function createDomainSpec(yamlFile: string) {
 const domainSpecs = {
   auth: createDomainSpec('auth.yml'),
   products: createDomainSpec('products.yml'),
+  posts: createDomainSpec('posts.yml'),
   rbac: createDomainSpec('rbac_endpoints.yml'),
   users: createDomainSpec('users.yml'),
   projects: createDomainSpec('projects.yml'),
@@ -74,6 +75,7 @@ const domainSpecs = {
 const swaggerSpecs = {
   auth: swaggerJsdoc(domainSpecs.auth),
   products: swaggerJsdoc(domainSpecs.products),
+  posts: swaggerJsdoc(domainSpecs.posts),
   rbac: swaggerJsdoc(domainSpecs.rbac),
   users: swaggerJsdoc(domainSpecs.users),
   projects: swaggerJsdoc(domainSpecs.projects), 
