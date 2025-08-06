@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from './http';
 import { getLocalUserIdFromClerkUID } from './common';
+import { createUserFromClerk } from '../features/user/user.service';
 
 /**
  * Extracts and validates user ID from JWT middleware
@@ -21,11 +22,22 @@ export async function getAuthenticatedUserId(req: Request, next: NextFunction): 
 
   // If userId is a Clerk UID (starts with 'user_'), convert to local user ID
   if (typeof userId === 'string' && userId.startsWith('user_')) {
-    userId = await getLocalUserIdFromClerkUID(userId);
+    const clerkUID = userId;
+    userId = await getLocalUserIdFromClerkUID(clerkUID);
+    
+    // If user not found locally, create user from Clerk token
+    if (!userId) {
+      try {
+        const { user } = await createUserFromClerk(clerkUID);
+        userId = user.id;
+      } catch (error) {
+        throw new AppError('Failed to create user from Clerk token', 500);
+      }
+    }
   }
 
   if (!userId) {
-    throw new AppError('User not found', 404);
+    throw new AppError('User authentication failed', 401);
   }
 
   return Number(userId);
