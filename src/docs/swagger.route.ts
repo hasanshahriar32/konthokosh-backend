@@ -24,8 +24,12 @@ const options = {
         description: 'Base server',
       },
       {
-        url: 'https://think-scribe.onrender.com/api/v1',
+        url: 'https://konthokosh-backend.onrender.com/api/v1',
         description: 'Production server',
+      },
+      {
+        url: 'https://konthokosh.up.railway.app/api/v1',
+        description: 'Production server 2',
       },
       {
         url: 'http://localhost:2000/api/v1',
