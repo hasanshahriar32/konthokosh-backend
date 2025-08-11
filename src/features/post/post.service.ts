@@ -4,6 +4,7 @@ import { getPaginatedData, getPagination } from '../../utils/common';
 import { ListQuery } from '../../types/types';
 import { posts } from '../../db/schema/posts';
 import { users } from '../../db/schema/users';
+import EmbeddingService from '../../services/embeddingService';
 
 export async function getPosts(filters: ListQuery & { isApproved?: boolean; userId?: number; myPosts?: boolean }) {
   const page = Number(filters.page) || 1;
@@ -120,11 +121,24 @@ export async function getPost(id: string | number) {
 }
 
 export async function createPost(data: typeof posts.$inferInsert) {
+  // First, save the post to database
   const [created] = await db.insert(posts).values({
     ...data,
     createdAt: new Date(),
     updatedAt: new Date(),
   }).returning();
+
+  // After saving the post, generate and save embeddings asynchronously
+  // We don't await this to avoid blocking the response
+  EmbeddingService.createPostEmbedding(created.id)
+    .then(() => {
+      console.log(`✅ Embeddings generated successfully for post ${created.id}`);
+    })
+    .catch((error) => {
+      console.error(`❌ Failed to generate embeddings for post ${created.id}:`, error);
+      // In production, you might want to add this to a retry queue
+    });
+
   return created;
 }
 

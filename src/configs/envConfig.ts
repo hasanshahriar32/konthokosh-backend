@@ -34,6 +34,8 @@ const REQUIRED_ENV_VARS = [
   'RATE_LIMIT_WINDOW_MS',
   'RATE_LIMIT_MAX',
   'RATE_LIMIT_MESSAGE',
+  'CLOUDFLARE_API_KEY',
+  'CLOUDFLARE_ACCOUNT_ID',
 ];
 
 // Helper to check for missing env vars (checks .env and .env.example)
@@ -94,6 +96,8 @@ export const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || '100', 10);
 export const RATE_LIMIT_MESSAGE =
   process.env.RATE_LIMIT_MESSAGE ||
   'Too many requests from this IP, please try again later.';
+export const CLOUDFLARE_API_KEY = process.env.CLOUDFLARE_API_KEY;
+export const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 
 // Centralized config object
 export const envConfig = {
@@ -124,6 +128,8 @@ export const envConfig = {
   RATE_LIMIT_WINDOW_MS,
   RATE_LIMIT_MAX,
   RATE_LIMIT_MESSAGE,
+  CLOUDFLARE_API_KEY,
+  CLOUDFLARE_ACCOUNT_ID,
 };
 
 // Run check on import (can be disabled in prod if needed)

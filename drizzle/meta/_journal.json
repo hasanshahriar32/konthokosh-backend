@@ -15,6 +15,41 @@
       "when": 1754429052414,
       "tag": "0001_next_corsair",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1754945129314,
+      "tag": "0002_harsh_snowbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1754945833151,
+      "tag": "0003_parallel_meggan",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1754946567769,
+      "tag": "0004_awesome_chameleon",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1754946658149,
+      "tag": "0005_chubby_marvex",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1754946733008,
+      "tag": "0006_wooden_frightful_four",
+      "breakpoints": true
     }
   ]
 }

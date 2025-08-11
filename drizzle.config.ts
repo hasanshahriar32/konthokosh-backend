@@ -13,6 +13,7 @@ export default {
     './dist/src/db/schema/fileUploadSchema.js',
     './dist/src/db/schema/project.js',
     './dist/src/db/schema/embedding.task.js',
+    './dist/src/db/schema/postEmbeddings.js',
   ],
   out: './drizzle',
   dialect: DATABASE_DIALECT,

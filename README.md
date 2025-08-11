@@ -2,7 +2,6 @@
 
 A scalable Express.js project with TypeScript featuring CRUD with pagination, filtering, sorting, file uploads, soft delete, RBAC, JWT authentication, access and audit logs, and cron jobs for scheduled tasks.
 
-![Cover Image](./src/docs/cover.png)
 
 ## Features
 
@@ -83,7 +82,7 @@ npm run dev
    - username - sai min
    - password - saimin
 
-3. 📄 Postman collection can be found in `src/docs` folder. Get [here](src/docs/rbac_express.postman_collection.
+3. 📄 Postman collection can be found in `src/docs` folder. Get [here](src/docs/rbac_express.postman_collection.)
 4. 📝 Read detailed technical documentation [here](src/docs/tech_docs.md)
 
 ## 👨‍💻 Author
@@ -95,10 +94,10 @@ npm run dev
 
 ### 🌐 Connect with me
 
-- 💼 [LinkedIn](https://www.linkedin.com/in/sai-min-pyae-kyaw-369005200/)
-- 💻 [GitHub](https://github.com/MinPyaeKyaw)
-- 🌍 [Facebook](https://www.facebook.com/minpyae.kyaw.73)
+- 💼 [LinkedIn](https://www.linkedin.com/in/hasanshahriar32/)
+- 💻 [GitHub](https://github.com/hasanshahriar32)
+- 🌍 [Facebook](https://www.facebook.com/hasanshahriar32)
 
 ---
 
-Made with ❤️ by Sai Min Pyae Kyaw
+Made with ❤️ by Shahriar Hasan

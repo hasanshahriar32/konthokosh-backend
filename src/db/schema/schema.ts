@@ -8,3 +8,4 @@ export * from './embedding.task';
 export * from './fileUploadSchema';
 export * from './project';
 export * from './embedDataSchema';
+export * from './postEmbeddings';

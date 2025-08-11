@@ -3,6 +3,7 @@ import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
 import { getAuthenticatedUserId } from '../../utils/auth';
 import * as postService from './post.service';
+import EmbeddingService from '../../services/embeddingService';
 
 // GET /posts - Get all posts with pagination and filters
 export const getAllPosts = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
@@ -185,5 +186,76 @@ export const unapproveOnePost = catchAsync(async (req: Request, res: Response, n
     success: true,
     message: 'Post unapproved successfully',
     data: unapprovedPost,
+  });
+});
+
+// POST /posts/:id/embeddings - Generate embeddings for a specific post
+export const generatePostEmbedding = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+  const { id } = req.params;
+  await getAuthenticatedUserId(req, next); // Ensure user is authenticated
+
+  const embedding = await EmbeddingService.createPostEmbedding(Number(id));
+
+  sendResponse(res, {
+    statusCode: 201,
+    success: true,
+    message: 'Post embedding generated successfully',
+    data: embedding,
+  });
+});
+
+// POST /posts/embeddings/batch - Generate embeddings for multiple posts
+export const generateBatchEmbeddings = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+  await getAuthenticatedUserId(req, next); // Ensure user is authenticated
+  
+  const { postIds } = req.body;
+  
+  if (!Array.isArray(postIds) || postIds.length === 0) {
+    return sendResponse(res, {
+      statusCode: 400,
+      success: false,
+      message: 'postIds must be a non-empty array of post IDs',
+      data: null,
+    });
+  }
+
+  const result = await EmbeddingService.createMultiplePostEmbeddings(postIds);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: `Batch embedding generation completed. ${result.successCount}/${result.totalProcessed} successful.`,
+    data: result,
+  });
+});
+
+// POST /posts/search/similar - Find similar posts using embeddings
+export const findSimilarPosts = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+  await getAuthenticatedUserId(req, next); // Ensure user is authenticated
+  
+  const { query, limit = 10, threshold = 0.7 } = req.body;
+  
+  if (!query || typeof query !== 'string') {
+    return sendResponse(res, {
+      statusCode: 400,
+      success: false,
+      message: 'query must be a non-empty string',
+      data: null,
+    });
+  }
+
+  const similarPosts = await EmbeddingService.findSimilarPosts(query, Number(limit), Number(threshold));
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Similar posts retrieved successfully',
+    data: {
+      query,
+      limit: Number(limit),
+      threshold: Number(threshold),
+      results: similarPosts,
+      count: similarPosts.length
+    },
   });
 });

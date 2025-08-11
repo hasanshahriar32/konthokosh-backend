@@ -9,6 +9,9 @@ import {
   deleteOnePost,
   approveOnePost,
   unapproveOnePost,
+  generatePostEmbedding,
+  generateBatchEmbeddings,
+  findSimilarPosts,
 } from './post.controller';
 
 const postRoutes = Router();
@@ -81,6 +84,36 @@ postRoutes.patch(
   '/posts/:id/unapprove',
   validateRequest(validator.unapprove),
   unapproveOnePost
+);
+
+// =========================
+// POST /posts/:id/embeddings
+// - Generate embeddings for a specific post
+// =========================
+postRoutes.post(
+  '/posts/:id/embeddings',
+  validateRequest(validator.generateEmbedding),
+  generatePostEmbedding
+);
+
+// =========================
+// POST /posts/embeddings/batch
+// - Generate embeddings for multiple posts
+// =========================
+postRoutes.post(
+  '/posts/embeddings/batch',
+  validateRequest(validator.batchEmbeddings),
+  generateBatchEmbeddings
+);
+
+// =========================
+// POST /posts/search/similar
+// - Find similar posts using embeddings
+// =========================
+postRoutes.post(
+  '/posts/search/similar',
+  validateRequest(validator.similarSearch),
+  findSimilarPosts
 );
 
 export default postRoutes;

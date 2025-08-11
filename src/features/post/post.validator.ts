@@ -62,6 +62,29 @@ const postValidator = {
       id: Joi.number().integer().min(1).required(),
     }),
   },
+
+  // POST /posts/:id/embeddings - Generate embedding for a post
+  generateEmbedding: {
+    params: Joi.object({
+      id: Joi.number().integer().min(1).required(),
+    }),
+  },
+
+  // POST /posts/embeddings/batch - Generate embeddings for multiple posts
+  batchEmbeddings: {
+    body: Joi.object({
+      postIds: Joi.array().items(Joi.number().integer().min(1)).min(1).max(100).required(),
+    }),
+  },
+
+  // POST /posts/search/similar - Find similar posts
+  similarSearch: {
+    body: Joi.object({
+      query: Joi.string().trim().min(1).max(1000).required(),
+      limit: Joi.number().integer().min(1).max(50).default(10),
+      threshold: Joi.number().min(0).max(1).default(0.7),
+    }),
+  },
 };
 
 export default postValidator;
