@@ -194,7 +194,7 @@ export class EmbeddingService {
         whereConditions += ` AND pe.post_id != ${excludePostId}`;
       }
       
-      // Use raw SQL with proper vector casting
+      // Use raw SQL with proper vector casting - get more results to filter
       const result = await db.execute(sql`
         SELECT 
           pe.post_id,
@@ -207,19 +207,19 @@ export class EmbeddingService {
         FROM post_embeddings pe
         JOIN posts p ON pe.post_id = p.id
         WHERE ${sql.raw(whereConditions)}
-        ORDER BY pe.embedding <=> ${embeddingString}::vector
-        LIMIT ${limit * 2}
+        ORDER BY pe.embedding <=> ${embeddingString}::vector ASC
+        LIMIT 20
       `);
       
-      // Filter by threshold after getting results (to avoid complex SQL)
-      const filteredResults = result.rows.filter((row: any) => 
-        parseFloat(row.similarity) >= threshold
-      ).slice(0, limit); // Apply limit after filtering
+      // Filter by threshold and limit to maximum 5 results
+      const filteredResults = result.rows
+        .filter((row: any) => parseFloat(row.similarity) >= threshold)
+        .slice(0, 5); // Maximum 5 similar posts
       
-      console.log(`📊 Found ${result.rows.length} total posts, ${filteredResults.length} above threshold ${threshold}`);
+      console.log(`📊 Found ${result.rows.length} total posts, ${filteredResults.length} above threshold ${threshold} (max 5)`);
       
       if (filteredResults.length > 0) {
-        console.log(`📈 Similarity scores: ${filteredResults.map((r: any) => parseFloat(r.similarity).toFixed(3)).join(', ')}`);
+        console.log(`📈 Top ${filteredResults.length} similarity scores: ${filteredResults.map((r: any) => parseFloat(r.similarity).toFixed(3)).join(', ')}`);
       }
       
       return filteredResults;
