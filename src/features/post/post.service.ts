@@ -128,18 +128,37 @@ export async function createPost(data: typeof posts.$inferInsert) {
     updatedAt: new Date(),
   }).returning();
 
-  // After saving the post, generate and save embeddings asynchronously
-  // We don't await this to avoid blocking the response
-  EmbeddingService.createPostEmbedding(created.id)
-    .then(() => {
-      console.log(`✅ Embeddings generated successfully for post ${created.id}`);
-    })
-    .catch((error) => {
-      console.error(`❌ Failed to generate embeddings for post ${created.id}:`, error);
-      // In production, you might want to add this to a retry queue
-    });
+  // Generate embeddings for the new post and find similar posts (RAG architecture)
+  let similarPosts: any[] = [];
+  
+  try {
+    // Generate and save embeddings for the new post
+    await EmbeddingService.createPostEmbedding(created.id);
+    console.log(`✅ Embeddings generated successfully for post ${created.id}`);
 
-  return created;
+    // Find similar posts using RAG (Retrieval-Augmented Generation)
+    if (created.post && created.post.trim().length > 0) {
+      similarPosts = await EmbeddingService.findSimilarPosts(
+        created.post, 
+        5, // limit to 5 similar posts
+        0.5, // lower threshold for more results (50% similarity)
+        created.id // exclude the current post
+      );
+      
+      console.log(`🔍 Found ${similarPosts.length} similar posts for post ${created.id}`);
+    }
+  } catch (error) {
+    console.error(`❌ Failed to generate embeddings or find similar posts for post ${created.id}:`, error);
+    // Don't fail the post creation if embedding/similarity search fails
+  }
+
+  // Return the created post with similar posts (RAG response)
+  return {
+    post: created,
+    similarPosts: similarPosts,
+    ragEnabled: true,
+    similarPostsCount: similarPosts.length
+  };
 }
 
 export async function updatePost({

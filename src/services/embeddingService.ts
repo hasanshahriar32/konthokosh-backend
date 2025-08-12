@@ -170,14 +170,31 @@ export class EmbeddingService {
    * @param queryText The text to find similar posts for
    * @param limit Maximum number of results to return
    * @param threshold Minimum similarity threshold (0-1)
+   * @param excludePostId Post ID to exclude from results (usually the current post)
    * @returns Promise<Array> Array of similar posts with similarity scores
    */
-  static async findSimilarPosts(queryText: string, limit: number = 10, threshold: number = 0.7) {
+  static async findSimilarPosts(queryText: string, limit: number = 10, threshold: number = 0.7, excludePostId?: number) {
     try {
       // Generate embedding for the query text
       const queryEmbedding = await this.generateEmbedding(queryText);
       
-      // Use raw SQL with proper parameter binding for vector operations
+      // Convert embedding array to string format for PostgreSQL vector
+      const embeddingString = `[${queryEmbedding.join(',')}]`;
+      
+      console.log(`🔍 Searching for similar posts with embedding length: ${queryEmbedding.length}, excluding post: ${excludePostId || 'none'}`);
+      
+      // Build WHERE conditions
+      let whereConditions = `
+        p.is_deleted = false 
+        AND p.is_active = true
+        AND p.is_approved = true
+      `;
+      
+      if (excludePostId) {
+        whereConditions += ` AND pe.post_id != ${excludePostId}`;
+      }
+      
+      // Use raw SQL with proper vector casting
       const result = await db.execute(sql`
         SELECT 
           pe.post_id,
@@ -186,20 +203,31 @@ export class EmbeddingService {
           p.post,
           p.is_approved,
           p.user_id,
-          1 - (pe.embedding <=> ${queryEmbedding}::vector) as similarity
+          1 - (pe.embedding <=> ${embeddingString}::vector) as similarity
         FROM post_embeddings pe
         JOIN posts p ON pe.post_id = p.id
-        WHERE p.is_deleted = false 
-          AND p.is_active = true
-          AND 1 - (pe.embedding <=> ${queryEmbedding}::vector) >= ${threshold}
-        ORDER BY pe.embedding <=> ${queryEmbedding}::vector
-        LIMIT ${limit}
+        WHERE ${sql.raw(whereConditions)}
+        ORDER BY pe.embedding <=> ${embeddingString}::vector
+        LIMIT ${limit * 2}
       `);
       
-      return result.rows;
+      // Filter by threshold after getting results (to avoid complex SQL)
+      const filteredResults = result.rows.filter((row: any) => 
+        parseFloat(row.similarity) >= threshold
+      ).slice(0, limit); // Apply limit after filtering
+      
+      console.log(`📊 Found ${result.rows.length} total posts, ${filteredResults.length} above threshold ${threshold}`);
+      
+      if (filteredResults.length > 0) {
+        console.log(`📈 Similarity scores: ${filteredResults.map((r: any) => parseFloat(r.similarity).toFixed(3)).join(', ')}`);
+      }
+      
+      return filteredResults;
     } catch (error) {
       console.error('Error finding similar posts:', error);
-      throw new Error(`Failed to find similar posts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Return empty array instead of throwing error to not break post creation
+      console.log('🚨 Returning empty similar posts due to error');
+      return [];
     }
   }
 }
