@@ -4,7 +4,7 @@ import { posts } from './posts';
 export const postEmbeddings = pgTable('post_embeddings', {
   id: serial('id').primaryKey(),
   postId: integer('post_id').references(() => posts.id).notNull(),
-  embedding: vector('embedding', { dimensions: 256 }), // bge-m3 model produces 1024-dimensional embeddings
+  embedding: vector('embedding', { dimensions: 1024 }), // bge-m3 model produces 1024-dimensional embeddings
   model: text('model').notNull().default('@cf/baai/bge-m3'),
   textContent: text('text_content').notNull(), // Store the text that was embedded for reference
   createdAt: timestamp('created_at').defaultNow().notNull(),

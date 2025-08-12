@@ -1,38 +1,72 @@
-import OpenAI from 'openai';
 import { CLOUDFLARE_API_KEY, CLOUDFLARE_ACCOUNT_ID } from '../configs/envConfig';
 import db from '../db/db';
 import { postEmbeddings } from '../db/schema/postEmbeddings';
 import { posts } from '../db/schema/posts';
 import { eq, sql } from 'drizzle-orm';
 
-// Initialize OpenAI client for Cloudflare Workers AI
-const openai = new OpenAI({
-  apiKey: CLOUDFLARE_API_KEY,
-  baseURL: `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/v1`,
-});
+// Cloudflare Workers AI configuration
+const CLOUDFLARE_API_URL = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/v1`;
+
+interface CloudflareEmbeddingResponse {
+  object: string;
+  data: Array<{
+    object: string;
+    embedding: number[];
+    index: number;
+  }>;
+  model: string;
+}
 
 export class EmbeddingService {
   private static readonly MODEL = '@cf/baai/bge-m3';
 
   /**
-   * Generate embeddings for a text using Cloudflare Workers AI
+   * Generate embeddings for a text using Cloudflare Workers AI (Direct HTTP)
    * @param text The text to generate embeddings for
    * @returns Promise<number[]> The embedding vector
    */
   static async generateEmbedding(text: string): Promise<number[]> {
+    console.log(`🔍 Generating embedding for text: ${text.substring(0, 50)}...`);
+    
     try {
-      const response = await openai.embeddings.create({
-        model: this.MODEL,
-        input: text.trim(),
+      const response = await fetch(`${CLOUDFLARE_API_URL}/embeddings`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${CLOUDFLARE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: this.MODEL,
+          input: text.trim(),
+        }),
       });
 
-      if (response.data && response.data.length > 0) {
-        return response.data[0].embedding;
-      } else {
-        throw new Error('No embedding data received from Cloudflare Workers AI');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Cloudflare API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
+
+      const data: CloudflareEmbeddingResponse = await response.json();
+      
+      if (!data.data || data.data.length === 0) {
+        throw new Error("No embedding data received from Cloudflare API");
+      }
+
+      const embedding = data.data[0].embedding;
+      console.log(`✅ Embedding generated successfully, dimensions: ${embedding.length}`);
+      
+      // Check if embedding is all zeros (indicates API issue)
+      const nonZeroCount = embedding.filter(val => val !== 0).length;
+      console.log(`📊 Non-zero values: ${nonZeroCount}/${embedding.length}`);
+      
+      if (nonZeroCount === 0) {
+        throw new Error("Received all-zero embedding from Cloudflare API - this indicates an API issue");
+      }
+      
+      return embedding;
+      
     } catch (error) {
-      console.error('Error generating embedding:', error);
+      console.error('❌ Error generating embedding:', error);
       throw new Error(`Failed to generate embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
