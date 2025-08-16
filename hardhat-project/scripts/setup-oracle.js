@@ -1,6 +1,6 @@
+/* eslint-disable no-undef */
 const hre = require("hardhat");
-require("dotenv").config();
-
+require('dotenv').config({ path: '../../.env' });
 async function main() {
     console.log('🔧 Setting up oracle address in smart contract...');
 
