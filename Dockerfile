@@ -7,7 +7,10 @@ WORKDIR /app
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Install dependencies
+# Copy hardhat-project directory for postinstall script
+COPY hardhat-project/ ./hardhat-project/
+
+# Install dependencies (this will run postinstall script)
 RUN npm install
 
 # Copy app source code
