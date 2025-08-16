@@ -7,6 +7,9 @@ WORKDIR /app
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
+# Copy .env file for environment variables
+COPY .env ./
+
 # Copy hardhat-project directory for postinstall script
 COPY hardhat-project/ ./hardhat-project/
 
