@@ -4,7 +4,7 @@
   "main": "server.js",
   "scripts": {
     "dev": "npm run clerk:token && nodemon --ext ts --exec ts-node src/server.ts",
-    "build": "tsc",
+    "build": "tsc && npm run hardhat-compile",
     "start": "node dist/src/server.js",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
