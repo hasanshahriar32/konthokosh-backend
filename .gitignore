@@ -4,4 +4,4 @@ dist
 src/storage
 
 clerk-session-token.txt
-.env
+# .env
