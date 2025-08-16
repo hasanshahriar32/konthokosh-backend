@@ -11,6 +11,7 @@
     "format": "prettier --write .",
     "prepare": "husky",
     "release": "standard-version",
+    "postinstall": "cd hardhat-project && npm install",
     "docs": "echo Documentation available at: file://%cd%/docs/swagger/openapi.yml && echo Documentation available at: file://%cd%/docs/swagger/README.md",
     "postbuild": "npm run copy-assets",
     "copy-assets": "npm run copy-public && npm run copy-views && npm run copy-swagger",
@@ -23,7 +24,8 @@
     "db:studio:prod": "cross-env drizzle-kit studio --host 0.0.0.0 --port $PORT",
     "db:seed": "npx tsx ./drizzle/seed-initial-data.ts",
     "db:drop": "drizzle-kit drop",
-    "clerk:token": "node ./scripts/generate-clerk-session-token.mjs"
+    "clerk:token": "node ./scripts/generate-clerk-session-token.mjs",
+    "hardhat-compile": "cd hardhat-project && npx hardhat compile"
   },
   "keywords": [],
   "author": "",

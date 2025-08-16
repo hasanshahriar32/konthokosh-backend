@@ -1,4 +1,5 @@
 node_modules
+hardhat-project/node_modules
 dist
 src/storage
 

@@ -1,0 +1,40 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "C:\\Users\\mrhas\\Desktop\\konthokosh-backend\\hardhat-project\\contracts\\AdvancedPostManager.sol": {
+      "lastModificationDate": 1755292877101,
+      "contentHash": "4e5595885de95bb1a3d142039d1fb013",
+      "sourceName": "contracts/AdvancedPostManager.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "AdvancedPostManager"
+      ]
+    }
+  }
+}
